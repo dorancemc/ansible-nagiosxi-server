@@ -9,6 +9,9 @@
   get_url: 
     url: http://assets.nagios.com/downloads/nagiosxi/xi-latest.tar.gz 
     dest: /tmp
+  tags:
+    - nagiosxi.install
+    - nagiosxi.update
 
 - name: extact latest release
   unarchive: 
@@ -16,6 +19,23 @@
     dest: /tmp 
     copy: no 
     creates: /tmp/nagiosxi
+  tags:
+    - nagiosxi.install
+    - nagiosxi.update
+
+- name: Check the nagios exists
+  stat:
+    path: /usr/local/nagios/bin/nagios
+  register: stat_result
+  tags:
+    - nagiosxi.install
+    - nagiosxi.update
 
 - name: perform (non-interactive) full install
-  shell: ./fullinstall -n chdir=/tmp/nagiosxi creates=/etc/pki/rpm-gpg/RPM-GPG-KEY-NAGIOS
+  command: ./fullinstall -n 
+  args: 
+    chdir: /tmp/nagiosxi
+    creates: /etc/pki/rpm-gpg/RPM-GPG-KEY-NAGIOS
+  when: not stat_result.stat.exists
+  tags:
+    - nagiosxi.install
