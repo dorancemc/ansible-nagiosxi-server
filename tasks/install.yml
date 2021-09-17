@@ -1,0 +1,33 @@
+---
+
+- name: Check the nagios exists
+  stat:
+    path: /usr/local/nagioss
+  register: stat_result
+
+- name: perform (non-interactive) full install
+  command: ./fullinstall -n
+  args:
+    chdir: /tmp/nagiosxi
+    creates: /usr/local/nagios
+  when: not stat_result.stat.exists and nagios_mysql_root_passwd is not defined
+
+- name: perform (non-interactive) full install
+  command:
+    argv:
+      - ./fullinstall 
+      - -n
+      - --mysql-password 
+      - "{{ nagios_mysql_root_passwd }}"
+  args:
+    chdir: /tmp/nagiosxi
+    creates: /usr/local/nagios
+  when: not stat_result.stat.exists and nagios_mysql_root_passwd is defined
+
+# follow the install in "sudo tail -f /tmp/nagiosxi/install.log" 
+
+- name: perform (non-interactive) full upgrade
+  command: ./upgrade -n
+  args:
+    chdir: /tmp/nagiosxi
+  when: nagios_upgrade

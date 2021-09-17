@@ -1,0 +1,12 @@
+---
+
+- name: Disable SELinux
+  selinux:
+    state: disabled
+
+- name: extact latest release
+  unarchive:
+    src: "{{ nagios_download_url }}"
+    dest: /tmp
+    copy: no
+    creates: /tmp/nagiosxi
