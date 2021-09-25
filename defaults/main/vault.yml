@@ -1,0 +1,4 @@
+nagiosxi_db_passwd: n@gweb
+ndoutils_db_passwd: n@gweb
+nagiosql_db_passwd: n@gweb
+nagios_db_root_passwd: nagiosxi

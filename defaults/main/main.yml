@@ -1,0 +1,19 @@
+---
+
+# https://assets.nagios.com/downloads/nagiosxi/versions.php
+# nagios_download_url: https://assets.nagios.com/downloads/nagiosxi/5/xi-5.8.6.tar.gz
+nagios_download_url: https://assets.nagios.com/downloads/nagiosxi/xi-latest.tar.gz
+nagios_upgrade: false
+
+nagios_db_external: true # if the database is locate in another host
+nagios_db_host:
+nagios_db_databases:
+  nagiosxi:
+    user: nagiosxi
+    password: "{{ nagiosxi_db_passwd }}"
+  nagios:
+    user: ndoutils
+    password: "{{ ndoutils_db_passwd }}"
+  nagiosql:
+    user: nagiosql
+    password: "{{ nagiosql_db_passwd }}"

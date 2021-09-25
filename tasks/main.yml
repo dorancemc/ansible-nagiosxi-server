@@ -3,3 +3,6 @@
 - include: download.yml
 
 - include: install.yml
+
+- include: db_offloading.yml
+  when: nagios_db_external

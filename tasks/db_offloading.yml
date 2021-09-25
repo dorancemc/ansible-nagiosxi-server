@@ -1,0 +1,80 @@
+# https://assets.nagios.com/downloads/nagiosxi/docs/Offloading_MySQL_to_Remote%20Server.pdf
+# https://support.nagios.com/kb/article/nagios-xi-strict_trans_tables-780.html
+---
+
+- name: disable STRICT_TRANS_TABLES
+  community.mysql.mysql_query:
+    login_db: nagiosql
+    login_user: root
+    login_host: 127.0.0.1
+    login_password: "{{ nagios_db_root_password }}"
+    query:
+    - SET @@SQL_MODE = REPLACE(@@SQL_MODE,'STRICT_TRANS_TABLES', '');
+    - SET @@GLOBAL.SQL_MODE = REPLACE(@@GLOBAL.SQL_MODE,'STRICT_TRANS_TABLES', '');
+    - SELECT @@SQL_MODE, @@GLOBAL.SQL_MODE;
+    single_transaction: yes
+  delegate_to: "{{ nagios_db_host }}"
+
+- name: install python3-PyMySQL
+  pip:
+    name: PyMySQL
+
+- name: Stop nagios service
+  ansible.builtin.systemd:
+    name: nagios.service
+    state: stopped
+
+- name: Dump all databases to local folder
+  mysql_db:
+    login_host: 127.0.0.1
+    login_user: "{{ nagios_db_databases[item].user }}"
+    login_password: "{{ nagios_db_databases[item].password }}"
+    name: "{{ item }}"
+    state: dump
+    target: /tmp/{{ item }}.sql
+  with_items: "{{ nagios_db_databases }}"
+
+- name: Import all databases to database host
+  mysql_db:
+    login_host: "{{ nagios_db_host }}"
+    login_user: "{{ nagios_db_databases[item].user }}"
+    login_password: "{{ nagios_db_databases[item].password }}"
+    name: "{{ item }}"
+    state: import
+    target: /tmp/{{ item }}.sql
+  with_items: "{{ nagios_db_databases }}"
+
+- replace:
+    path: /usr/local/nagios/etc/ndo.cfg
+    regexp: db_host=.*
+    replace: db_host={{ nagios_db_host }}
+    backup: yes
+
+- replace:
+    path: /usr/local/nagiosxi/html/config.inc.php
+    regexp: '"dbserver" =>.*'
+    replace: '"dbserver" => "{{ nagios_db_host }}",'
+    backup: yes
+
+- replace:
+    path: /root/scripts/automysqlbackup
+    regexp: ^DBHOST=.*
+    replace: DBHOST={{ nagios_db_host }}
+    backup: yes
+
+- replace:
+    path: /usr/local/nagvis/etc/nagvis.ini.php
+    regexp: dbinstancename=.*
+    replace: dbinstancename="{{ nagios_db_host }}"
+    backup: yes
+
+- name: Start nagios service 
+  ansible.builtin.systemd:
+    name: nagios.service
+    state: started
+
+- name: Stop mysqld service
+  ansible.builtin.systemd:
+    name: mysqld
+    state: stopped
+    enabled: no
