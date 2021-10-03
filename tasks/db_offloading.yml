@@ -24,4 +24,4 @@
   no_log: yes
 
 - include: database_tasks
-  when: _nagiosdbs.nagios<1
+  when: _nagiosdbs is defined and _nagiosdbs.nagios<1
