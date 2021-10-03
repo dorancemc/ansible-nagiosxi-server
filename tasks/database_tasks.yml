@@ -1,0 +1,78 @@
+---
+
+- name: disable STRICT_TRANS_TABLES
+  community.mysql.mysql_query:
+    login_db: "{{ item }}"
+    login_user: root
+    login_host: "{{ nagios_db_host }}"    
+    login_password: "{{ nagios_db_root_password }}"
+    query:
+    - SET @@SQL_MODE = REPLACE(@@SQL_MODE,'STRICT_TRANS_TABLES', '');
+    - SET @@GLOBAL.SQL_MODE = REPLACE(@@GLOBAL.SQL_MODE,'STRICT_TRANS_TABLES', '');
+    - SELECT @@SQL_MODE, @@GLOBAL.SQL_MODE;
+    single_transaction: yes
+  with_items: "{{ nagios_db_databases }}"
+
+- name: Stop nagios service
+  ansible.builtin.systemd:
+    name: nagios.service
+    state: stopped
+
+- name: Dump all databases to local folder
+  mysql_db:
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: "{{ nagios_db_root_password }}"
+    name: "{{ item }}"
+    state: dump
+    target: /tmp/{{ item }}.sql
+  with_items: "{{ nagios_db_databases }}"
+
+- name: Import all databases to database host
+  mysql_db:
+    login_host: "{{ nagios_db_host }}"
+    login_user: root
+    login_password: "{{ nagios_db_root_password }}"
+    name: "{{ item }}"
+    state: import
+    target: /tmp/{{ item }}.sql
+  with_items: "{{ nagios_db_databases }}"
+
+- name: replace in ndo.cfg
+  replace:
+    path: /usr/local/nagios/etc/ndo.cfg
+    regexp: db_host=.*
+    replace: db_host={{ nagios_db_host }}
+    backup: yes
+
+- name: replace in config.inc.php
+  replace:
+    path: /usr/local/nagiosxi/html/config.inc.php
+    regexp: '"dbserver" =>.*'
+    replace: '"dbserver" => "{{ nagios_db_host }}",'
+    backup: yes
+
+- name: replace in automysqlbackup
+  replace:
+    path: /root/scripts/automysqlbackup
+    regexp: ^DBHOST=.*
+    replace: DBHOST={{ nagios_db_host }}
+    backup: yes
+
+- name: replace in nagvis.ini.php
+  replace:
+    path: /usr/local/nagvis/etc/nagvis.ini.php
+    regexp: dbinstancename=.*
+    replace: dbinstancename="{{ nagios_db_host }}"
+    backup: yes
+
+- name: Start nagios service 
+  ansible.builtin.systemd:
+    name: nagios.service
+    state: started
+
+- name: Stop mysqld service
+  ansible.builtin.systemd:
+    name: mysqld
+    state: stopped
+    enabled: no
