@@ -23,5 +23,5 @@
   with_items: "{{ _nagiosdb.results }}"
   no_log: yes
 
-- include: database_tasks
+- include: database_tasks.yml
   when: _nagiosdbs is defined and _nagiosdbs.nagios<1
